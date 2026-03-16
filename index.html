@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Миграция на единый UI-Kit — декабрь 2024</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap"
+    rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #090b0f;
+      --surface: #0f1318;
+      --surface2: #161b22;
+      --border: rgba(255, 255, 255, 0.07);
+      --border2: rgba(255, 255, 255, 0.13);
+      --accent: #4fffb0;
+      --accent2: #00c4ff;
+      --accent3: #ff6b6b;
+      --text: #e8eaf0;
+      --muted: #7a8090;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Space Grotesk', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    .deck {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 48px;
+      opacity: 0;
+      transform: translateX(60px);
+      transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: all;
+    }
+
+    .slide.exit {
+      opacity: 0;
+      transform: translateX(-60px);
+      pointer-events: none;
+    }
+
+    .slide::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 32px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      gap: 16px;
+      flex-shrink: 0;
+    }
+
+    .nav-dots {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--border2);
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+
+    .dot.active {
+      background: var(--accent);
+      width: 20px;
+      border-radius: 3px;
+    }
+
+    .btn {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      padding: 8px 20px;
+      border-radius: 6px;
+      font-family: var(--sans);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.03em;
+    }
+
+    .btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+
+    .slide-counter {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      min-width: 48px;
+      text-align: center;
+    }
+
+    .tag {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+      display: inline-block;
+      border: 1px solid rgba(79, 255, 176, 0.3);
+      padding: 4px 12px;
+      border-radius: 3px;
+    }
+
+    .tag.blue {
+      color: var(--accent2);
+      border-color: rgba(0, 196, 255, 0.3);
+    }
+
+    .tag.red {
+      color: var(--accent3);
+      border-color: rgba(255, 107, 107, 0.3);
+    }
+
+    h1 {
+      font-size: clamp(28px, 4vw, 48px);
+      font-weight: 300;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      text-align: center;
+    }
+
+    h1 strong {
+      font-weight: 600;
+    }
+
+    h2 {
+      font-size: clamp(20px, 2.5vw, 32px);
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      margin-bottom: 28px;
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 300;
+      text-align: center;
+      margin-top: 16px;
+      max-width: 560px;
+      line-height: 1.7;
+    }
+
+    .accent {
+      color: var(--accent);
+    }
+
+    .blue2 {
+      color: var(--accent2);
+    }
+
+    .red2 {
+      color: var(--accent3);
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      width: 100%;
+      max-width: 860px;
+    }
+
+    .cards.two {
+      grid-template-columns: repeat(2, 1fr);
+      max-width: 640px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      transition: border-color 0.2s;
+    }
+
+    .card:hover {
+      border-color: var(--border2);
+    }
+
+    .card-icon {
+      font-size: 22px;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      letter-spacing: 0.01em;
+    }
+
+    .card-text {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .card.accent-card {
+      border-color: rgba(79, 255, 176, 0.25);
+      background: rgba(79, 255, 176, 0.04);
+    }
+
+    .card.blue-card {
+      border-color: rgba(0, 196, 255, 0.25);
+      background: rgba(0, 196, 255, 0.04);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      width: 100%;
+      max-width: 740px;
+    }
+
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px 20px;
+      text-align: center;
+    }
+
+    .stat-num {
+      font-family: var(--mono);
+      font-size: 36px;
+      font-weight: 300;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .repo-table {
+      width: 100%;
+      max-width: 780px;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .repo-table th {
+      font-family: var(--mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      padding: 8px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .repo-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .repo-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 3px;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+
+    .done {
+      background: rgba(79, 255, 176, 0.1);
+      color: var(--accent);
+    }
+
+    .progress {
+      background: rgba(0, 196, 255, 0.1);
+      color: var(--accent2);
+    }
+
+    .pending {
+      background: rgba(255, 107, 107, 0.1);
+      color: var(--accent3);
+    }
+
+    .new-kit {
+      background: rgba(150, 100, 255, 0.1);
+      color: #b08fff;
+    }
+
+    .prog-row {
+      width: 100%;
+      max-width: 680px;
+      margin-bottom: 14px;
+    }
+
+    .prog-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+
+    .prog-label span:last-child {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .prog-track {
+      height: 6px;
+      background: var(--surface2);
+      border-radius: 3px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .prog-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .fill-green {
+      background: linear-gradient(90deg, #4fffb0, #00e87d);
+    }
+
+    .fill-blue {
+      background: linear-gradient(90deg, #00c4ff, #007bff);
+    }
+
+    .fill-purple {
+      background: linear-gradient(90deg, #b08fff, #8b5cf6);
+    }
+
+    .divider {
+      width: 40px;
+      height: 1px;
+      background: var(--accent);
+      margin: 20px auto;
+      opacity: 0.5;
+    }
+
+    .code-block {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.8;
+      width: 100%;
+      max-width: 680px;
+    }
+
+    .code-comment {
+      color: var(--muted);
+    }
+
+    .code-del {
+      color: #ff6b6b;
+    }
+
+    .code-add {
+      color: #4fffb0;
+    }
+
+    .glow {
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      opacity: 0.12;
+    }
+
+    .glow1 {
+      background: #4fffb0;
+      top: -100px;
+      right: -50px;
+    }
+
+    .glow2 {
+      background: #00c4ff;
+      bottom: -80px;
+      left: -60px;
+    }
+
+    .timeline {
+      width: 100%;
+      max-width: 680px;
+    }
+
+    .tl-item {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+      align-items: flex-start;
+    }
+
+    .tl-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-top: 4px;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .tl-dot::after {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 10px;
+      width: 1px;
+      height: calc(100% + 14px);
+      background: var(--border2);
+    }
+
+    .tl-item:last-child .tl-dot::after {
+      display: none;
+    }
+
+    .tl-title {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .tl-text {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .ai-box {
+      background: linear-gradient(135deg, rgba(0, 196, 255, 0.06), rgba(79, 255, 176, 0.04));
+      border: 1px solid rgba(0, 196, 255, 0.2);
+      border-radius: 10px;
+      padding: 20px 24px;
+      width: 100%;
+      max-width: 680px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .ai-badge {
+      background: rgba(0, 196, 255, 0.15);
+      color: var(--accent2);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      padding: 4px 8px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .big-num {
+      font-family: var(--mono);
+      font-size: clamp(52px, 8vw, 80px);
+      font-weight: 300;
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      width: 100%;
+      max-width: 720px;
+    }
+
+    .sg-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .sg-icon {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .sg-text {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .sg-text strong {
+      color: var(--text);
+      font-weight: 500;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="deck" id="deck">
+
+    <!-- 1 — Титул -->
+    <div class="slide active" data-slide="0">
+      <div class="glow glow1"></div>
+      <div class="glow glow2"></div>
+      <div class="tag">Frontend · декабрь 2024</div>
+      <h1>Миграция на единый<br><strong>UI-Kit</strong> и <strong>CSS-модули</strong></h1>
+      <div class="divider"></div>
+      <p class="sub">Рефакторинг фронтенд-архитектуры: ликвидация технического долга, подготовка к микрофронтендам и
+        восстановление визуальной консистентности</p>
+    </div>
+
+    <!-- 2 — Проблема -->
+    <div class="slide" data-slide="1">
+      <div class="tag red">Исходная проблема</div>
+      <h2>Точка входа: декабрь 2024</h2>
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon">◫</div>
+          <div class="card-title">6 репозиториев</div>
+          <div class="card-text">Каждый — с собственным локальным UI-китом. Правки нужно вносить в каждый отдельно.
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-icon">◈</div>
+          <div class="card-title">Визуальная дивергенция</div>
+          <div class="card-text">После запуска нового сервиса в июле 2025 элементы в разных разделах выглядят
+            по-разному.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">◉</div>
+          <div class="card-title">Блокер для mf-архитектуры</div>
+          <div class="card-text">Без унификации кита переход на микрофронтенды невозможен без масштабного регрессивного
+            долга.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 — Зачем микрофронтенды -->
+    <div class="slide" data-slide="2">
+      <div class="tag red">Почему это важно</div>
+      <h2>Цена одной правки сегодня</h2>
+      <div class="cards" style="max-width:780px;margin-bottom:28px">
+        <div class="card">
+          <div class="card-icon" style="font-family:var(--mono);font-size:16px;color:var(--accent3)">×6</div>
+          <div class="card-title">Коммиты</div>
+          <div class="card-text">Любое изменение общего меню или шапки — коммит в каждый из 6 репозиториев.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon" style="font-family:var(--mono);font-size:16px;color:var(--accent3)">×6</div>
+          <div class="card-title">Pull Request'ы</div>
+          <div class="card-text">6 PR на ревью и аппрув — вместо одного.
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-icon" style="font-family:var(--mono);font-size:16px;color:var(--accent3)">×6</div>
+          <div class="card-title">Сборки и деплои</div>
+          <div class="card-text">6 независимых билдов и 6 сборок дистрибутивов — на правку, которая занимает несколько
+            минут.</div>
+        </div>
+      </div>
+      <div class="cards two" style="max-width:640px">
+        <div class="card accent-card">
+          <div class="card-title accent">После перехода на mf</div>
+          <div class="card-text">Общие компоненты живут в одном месте. Правка шапки — один коммит, один PR, один деплой.
+          </div>
+        </div>
+        <div class="card blue-card">
+          <div class="card-title" style="color:var(--accent2)">Меньше размер бандлов</div>
+          <div class="card-text">Общие зависимости выносятся в отдельный сервис и шарятся на все — итоговый JS грузится
+            меньше.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 — Подход -->
+    <div class="slide" data-slide="3">
+      <div class="tag blue">Подход к решению</div>
+      <h2>Стратегия без блокировки команды дизайна</h2>
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-content">
+            <div class="tl-title">Актуализация UI-кита совместно с дизайнерами</div>
+            <div class="tl-text">Компоненты выверены, при необходимости исправлены, дизайн согласован — без создания
+              новых макетов.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-content">
+            <div class="tl-title">Самостоятельная реализация без макетов</div>
+            <div class="tl-text">Переход и точечный редизайн сервисов выполнен силами одного разработчика на основе
+              актуального кита.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot" style="background:var(--accent2)"></div>
+          <div class="tl-content">
+            <div class="tl-title">Финальный аппрув с дизайн-командой</div>
+            <div class="tl-text">Согласование итогового результата и правки в реальном времени — минимум трудозатрат со
+              стороны дизайна.</div>
+          </div>
+        </div>
+      </div>
+      <div class="ai-box" style="margin-top:24px">
+        <div class="ai-badge">AI</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6;">
+          Для ускорения миграции <span style="color:var(--accent2)">Qwen Coder</span> использовался при переносе
+          styled-компонентов на CSS-модули. При корректном контексте выдавал близкий к идеальному результат для
+          несложных компонентов.
+        </div>
+      </div>
+    </div>
+
+    <!-- 5 — Эффективность -->
+    <div class="slide" data-slide="4">
+      <div class="tag">Эффективность</div>
+      <div style="text-align:center">
+        <div class="big-num accent">2</div>
+        <div
+          style="font-size:15px;color:var(--muted);margin-top:8px;letter-spacing:0.05em;text-transform:uppercase;font-family:var(--mono)">
+          созвона × 1 час</div>
+      </div>
+      <div class="divider"></div>
+      <p class="sub" style="max-width:480px">Весь объём трудозатрат дизайн-команды на обсуждение, аппрув и согласование
+        двух сервисов — с правками в реальном времени</p>
+      <div class="cards two" style="margin-top:32px">
+        <div class="card accent-card">
+          <div class="card-title accent">Нет дополнительной нагрузки</div>
+          <div class="card-text">Команда дизайна не создавала новых макетов — работа сделана на основе существующего
+            кита.</div>
+        </div>
+        <div class="card blue-card">
+          <div class="card-title" style="color:var(--accent2)">Правки в реальном времени</div>
+          <div class="card-text">Все замечания фиксировались и устранялись прямо на созвоне без итераций и тикетов.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6 — Технический diff -->
+    <div class="slide" data-slide="5">
+      <div class="tag red">Технический долг → CSS-модули</div>
+      <h2>Замена <span class="red2">styled (emotion)</span> → <span class="accent">CSS-modules</span></h2>
+      <div class="code-block">
+        <div class="code-comment">// before — styled.ts (emotion)</div>
+        <div class="code-del">- const Button = styled.button`</div>
+        <div class="code-del">- background: ${props => props.primary ? '#4fffb0' : 'transparent'};</div>
+        <div class="code-del">- padding: 8px 16px;</div>
+        <div class="code-del">- `;</div>
+        <br>
+        <div class="code-comment">// after — CSS-модули</div>
+        <div class="code-add">+ import styles from './button.module.scss';</div>
+        <div class="code-add">+ const Button = (props) => (</div>
+        <div class="code-add">+ &lt;button className={cn(styles.btn, { [styles.primary]: props.primary })}
+          {...props} /&gt;</div>
+        <div class="code-add">+ );</div>
+      </div>
+      <p class="sub" style="margin-top:20px;font-size:13px">Явная изоляция стилей · быстрее hot reload · нет runtime
+        overhead emotion · легче статический анализ</p>
+    </div>
+
+    <!-- 7 — Цифры -->
+    <div class="slide" data-slide="6">
+      <div class="tag">Результат в цифрах</div>
+      <h2>Сокращение styled-кода</h2>
+      <div style="width:100%;max-width:680px">
+        <div class="prog-row">
+          <div class="prog-label">
+            <span>Меры <span style="color:var(--muted);font-family:var(--mono);font-size:11px;margin-left:8px">11 200 →
+                8 300 строк</span></span>
+            <span class="accent">−26%</span>
+          </div>
+          <div class="prog-track">
+            <div class="prog-fill fill-green" style="width:74%"></div>
+          </div>
+        </div>
+        <div class="prog-row">
+          <div class="prog-label">
+            <span>Киры <span style="color:var(--muted);font-family:var(--mono);font-size:11px;margin-left:8px">10 800 →
+                5 965 строк</span></span>
+            <span class="accent">−45%</span>
+          </div>
+          <div class="prog-track">
+            <div class="prog-fill fill-blue" style="width:55%"></div>
+          </div>
+        </div>
+        <div class="prog-row">
+          <div class="prog-label">
+            <span>Оценка рекламы <span
+                style="color:var(--muted);font-family:var(--mono);font-size:11px;margin-left:8px">10 900 → 5 200
+                строк</span></span>
+            <span class="accent">−52%</span>
+          </div>
+          <div class="prog-track">
+            <div class="prog-fill fill-purple" style="width:48%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="stats" style="margin-top:28px;max-width:680px">
+        <div class="stat">
+          <div class="stat-num accent">32 900</div>
+          <div class="stat-label">строк до</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num" style="color:#b08fff">19 465</div>
+          <div class="stat-label">строк после</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num accent">−41%</div>
+          <div class="stat-label">итого</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8 — Репозитории -->
+    <div class="slide" data-slide="7">
+      <div class="tag blue">Статус репозиториев</div>
+      <h2>Карта миграции</h2>
+      <table class="repo-table">
+        <thead>
+          <tr>
+            <th>Сервис</th>
+            <th>UI-Kit</th>
+            <th>CSS-модули</th>
+            <th>Статус</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-weight:500">Меры</td>
+            <td><span class="status-badge done">✓ новый</span></td>
+            <td><span style="font-family:var(--mono);font-size:12px;color:var(--accent)">30% заменено</span></td>
+            <td><span class="status-badge done">Готов</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight:500">Киры</td>
+            <td><span class="status-badge done">✓ новый</span></td>
+            <td><span style="font-family:var(--mono);font-size:12px;color:var(--accent)">40% заменено</span></td>
+            <td><span class="status-badge done">Готов</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight:500">Оценка рекламы</td>
+            <td><span class="status-badge done">✓ новый</span></td>
+            <td><span style="font-family:var(--mono);font-size:12px;color:var(--accent)">50% заменено</span></td>
+            <td><span class="status-badge done">Готов</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight:500">Оценка рисков</td>
+            <td><span class="status-badge done">✓ изначально</span></td>
+            <td><span style="font-family:var(--mono);font-size:12px;color:var(--accent)">100%</span></td>
+            <td><span class="status-badge new-kit">Новый</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight:500">Инциденты</td>
+            <td><span class="status-badge progress">↻ в процессе</span></td>
+            <td><span style="font-family:var(--mono);font-size:12px;color:var(--accent2)">в работе</span></td>
+            <td><span class="status-badge progress">Смежная команда</span></td>
+          </tr>
+          <tr>
+            <td style="font-weight:500">Лимитная кампания</td>
+            <td><span class="status-badge pending">устаревший</span></td>
+            <td>—</td>
+            <td><span class="status-badge pending">Заменяется ~2025</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 9 — Ключевые результаты -->
+    <div class="slide" data-slide="8">
+      <div class="tag">Ключевые результаты</div>
+      <h2>Что изменилось</h2>
+      <div class="summary-grid">
+        <div class="sg-item">
+          <div class="sg-icon" style="background:var(--accent)"></div>
+          <div class="sg-text"><strong>Визуальная консистентность</strong> восстановлена — все элементы в единой системе
+            вне зависимости от сервиса</div>
+        </div>
+        <div class="sg-item">
+          <div class="sg-icon" style="background:var(--accent2)"></div>
+          <div class="sg-text"><strong>Единый источник истины</strong> — правка UI-кита применяется ко всем сервисам, а
+            не по 6 раз</div>
+        </div>
+        <div class="sg-item">
+          <div class="sg-icon" style="background:#b08fff"></div>
+          <div class="sg-text"><strong>Снижение когнитивной нагрузки</strong> — меньше контекстов, меньше расхождений
+            между репозиториями</div>
+        </div>
+        <div class="sg-item">
+          <div class="sg-icon" style="background:var(--accent3)"></div>
+          <div class="sg-text"><strong>−41% styled-кода</strong> — убраны runtime-зависимости emotion, улучшена
+            производительность и читаемость</div>
+        </div>
+        <div class="sg-item">
+          <div class="sg-icon" style="background:var(--accent)"></div>
+          <div class="sg-text"><strong>4 из 6 репозиториев</strong> уже на новом ките — 67% кодовой базы унифицировано
+          </div>
+        </div>
+        <div class="sg-item">
+          <div class="sg-icon" style="background:var(--accent2)"></div>
+          <div class="sg-text"><strong>AI-ассистирование</strong> — Qwen Coder ускорил рутинную миграцию компонентов без
+            потери качества</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10 — Путь к микрофронтендам -->
+    <div class="slide" data-slide="9">
+      <div class="tag blue">Следующий шаг</div>
+      <h2>Путь к микрофронтендам</h2>
+      <div style="width:100%;max-width:680px">
+        <div class="prog-row" style="margin-bottom:20px">
+          <div class="prog-label" style="font-size:12px">
+            <span style="font-family:var(--mono)">Унификация UI-кита</span>
+            <span class="accent">4 / 6</span>
+          </div>
+          <div class="prog-track" style="height:8px">
+            <div class="prog-fill fill-green" style="width:67%"></div>
+          </div>
+        </div>
+        <div class="prog-row" style="margin-bottom:20px">
+          <div class="prog-label" style="font-size:12px">
+            <span style="font-family:var(--mono)">Отказ от styled / emotion</span>
+            <span class="accent">~40% общего кода</span>
+          </div>
+          <div class="prog-track" style="height:8px">
+            <div class="prog-fill fill-blue" style="width:40%"></div>
+          </div>
+        </div>
+        <div class="prog-row" style="margin-bottom:20px">
+          <div class="prog-label" style="font-size:12px">
+            <span style="font-family:var(--mono)">Готовность к mf-разбиению</span>
+            <span style="color:var(--muted)">готовимся</span>
+          </div>
+          <div class="prog-track" style="height:8px">
+            <div class="prog-fill fill-purple" style="width:30%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cards two" style="margin-top:20px">
+        <div class="card accent-card">
+          <div class="card-title accent">Изоляция стилей решена</div>
+          <div class="card-text">CSS-модули дают нативную изоляцию — обязательное условие при шардировании на
+            микрофронтенды.</div>
+        </div>
+        <div class="card blue-card">
+          <div class="card-title" style="color:var(--accent2)">Следующий этап</div>
+          <div class="card-text">Завершить миграцию «Инциденты», финализировать замену styled во всех сервисах,
+            подготовить базовую структуру для разбиения на микрофронтенды.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 11 — Итог -->
+    <div class="slide" data-slide="10">
+      <div class="glow glow1" style="opacity:0.18"></div>
+      <div class="glow glow2" style="opacity:0.15"></div>
+      <div class="tag">Итого</div>
+      <h1>Технический долг<br><strong class="accent">сокращён</strong>.<br>Архитектура<br><strong class="blue2">готова к
+          росту</strong>.</h1>
+      <div class="divider"></div>
+      <div style="display:flex;gap:32px;margin-top:8px">
+        <div style="text-align:center">
+          <div style="font-family:var(--mono);font-size:28px;font-weight:300;color:var(--accent)">−41%</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;letter-spacing:0.08em;text-transform:uppercase">
+            styled-кода</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-family:var(--mono);font-size:28px;font-weight:300;color:var(--accent2)">4/6</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;letter-spacing:0.08em;text-transform:uppercase">
+            репозиториев</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-family:var(--mono);font-size:28px;font-weight:300;color:#b08fff">2h</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;letter-spacing:0.08em;text-transform:uppercase">
+            нагрузка на дизайн</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- NAV -->
+  <nav class="nav">
+    <button class="btn" id="prev" onclick="go(-1)" disabled>← Назад</button>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div class="nav-dots" id="dots"></div>
+      <span class="slide-counter" id="counter">1 / 11</span>
+    </div>
+    <button class="btn" id="next" onclick="go(1)">Далее →</button>
+  </nav>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const total = slides.length;
+    let current = 0;
+
+    const dotsEl = document.getElementById('dots');
+    for (let i = 0; i < total; i++) {
+      const d = document.createElement('div');
+      d.className = 'dot' + (i === 0 ? ' active' : '');
+      d.onclick = () => goTo(i);
+      dotsEl.appendChild(d);
+    }
+
+    function goTo(n) {
+      const prev = current;
+      slides[prev].classList.remove('active');
+      slides[prev].classList.add('exit');
+      setTimeout(() => slides[prev].classList.remove('exit'), 500);
+      current = n;
+      slides[current].classList.add('active');
+      document.querySelectorAll('.dot').forEach((d, i) => d.classList.toggle('active', i === current));
+      document.getElementById('counter').textContent = (current + 1) + ' / 11';
+      document.getElementById('prev').disabled = current === 0;
+      document.getElementById('next').disabled = current === total - 1;
+
+      if (current === 6) {
+        setTimeout(() => {
+          document.querySelectorAll('.prog-fill').forEach(f => {
+            const w = f.style.width;
+            f.style.width = '0';
+            setTimeout(() => f.style.width = w, 50);
+          });
+        }, 100);
+      }
+    }
+
+    function go(dir) {
+      const n = Math.max(0, Math.min(total - 1, current + dir));
+      if (n !== current) goTo(n);
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight' || e.key === ' ') go(1);
+      if (e.key === 'ArrowLeft') go(-1);
+    });
+  </script>
+</body>
+
+</html>
